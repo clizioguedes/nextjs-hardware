@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { ChevronsUpDownIcon, SearchXIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { SearchXIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -14,47 +13,21 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CurrentPriceChart } from "@/components/dashboard/current-price-chart";
-import { PopularityPriceChart } from "@/components/dashboard/popularity-price-chart";
-import { PriceMoversChart } from "@/components/dashboard/price-movers-chart";
-import { useRequest } from "@/lib/use-request";
-import {
-  PRICE_HISTORY_CATEGORY_CPU,
-  PRICE_HISTORY_CATEGORY_GPU,
-  PRICE_HISTORY_CATEGORY_MEMORY,
-} from "@/lib/pcbuildwizard/constants";
+import { ChartLoading } from "@/components/dashboard/chart-loading";
 import {
   PRICE_HISTORY_AGGREGATION_METHOD,
   PRICE_HISTORY_TIME_AGGREGATION,
-  buildPriceHistoryUrl,
 } from "@/lib/pcbuildwizard/price-history";
 import type { PriceHistorySeries } from "@/lib/pcbuildwizard/types";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
-const CATEGORY_OPTIONS = [
-  { value: String(PRICE_HISTORY_CATEGORY_GPU), label: "Placas de vídeo" },
-  { value: String(PRICE_HISTORY_CATEGORY_MEMORY), label: "Memória RAM" },
-  { value: String(PRICE_HISTORY_CATEGORY_CPU), label: "Processadores" },
-];
 
 const PERIOD_OPTIONS = [
   { value: "6", label: "6 meses" },
@@ -75,10 +48,6 @@ const AGGREGATION_METHOD_OPTIONS = [
   { value: String(PRICE_HISTORY_AGGREGATION_METHOD.firstQuartile), label: "1º quartil de preços" },
   { value: String(PRICE_HISTORY_AGGREGATION_METHOD.lowest), label: "Menor preço" },
 ];
-
-interface PriceHistoryChartProps {
-  initialData: PriceHistorySeries[];
-}
 
 // When no specific product is picked, plot the top N by popularity — matches
 // the 5 chart colors (--chart-1..5) so the default view stays legible.
@@ -119,50 +88,35 @@ function buildChartConfig(series: PriceHistorySeries[]): ChartConfig {
   return config;
 }
 
-export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
-  const [category, setCategory] = useState(CATEGORY_OPTIONS[0].value);
-  const [months, setMonths] = useState("12");
-  const [timeAggregation, setTimeAggregation] = useState(String(PRICE_HISTORY_TIME_AGGREGATION.week));
-  const [aggregationMethod, setAggregationMethod] = useState(
-    String(PRICE_HISTORY_AGGREGATION_METHOD.median)
-  );
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [productPickerOpen, setProductPickerOpen] = useState(false);
+interface PriceHistoryChartProps {
+  series: PriceHistorySeries[];
+  isLoading: boolean;
+  months: string;
+  onMonthsChange: (value: string) => void;
+  timeAggregation: string;
+  onTimeAggregationChange: (value: string) => void;
+  aggregationMethod: string;
+  onAggregationMethodChange: (value: string) => void;
+  selectedProducts: string[];
+}
+
+export function PriceHistoryChart({
+  series,
+  isLoading,
+  months,
+  onMonthsChange,
+  timeAggregation,
+  onTimeAggregationChange,
+  aggregationMethod,
+  onAggregationMethodChange,
+  selectedProducts,
+}: PriceHistoryChartProps) {
   const [metric, setMetric] = useState<PriceMetric>("finalPrice");
 
-  const url = buildPriceHistoryUrl({
-    category: Number(category),
-    months: Number(months),
-    timeAggregation: Number(timeAggregation),
-    aggregationMethod: Number(aggregationMethod),
-  });
-
-  const { data, isLoading } = useRequest<PriceHistorySeries[]>(url, { fallbackData: initialData });
-
-  const series = data ?? [];
-
-  // A picked product only makes sense for the filters it was picked under —
-  // reset the selection whenever the underlying query (and therefore the
-  // list of available products) changes. Adjusting state during render
-  // (rather than in an effect) avoids an extra commit — see
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const [prevUrl, setPrevUrl] = useState(url);
-  if (url !== prevUrl) {
-    setPrevUrl(url);
-    setSelectedProducts([]);
-  }
-
-  // null = no manual selection ("Placas específicas" not used).
-  const selectedSeries =
+  const visibleSeries =
     selectedProducts.length > 0
       ? series.filter((s) => selectedProducts.includes(s.productDescription))
-      : null;
-
-  // Line/cost-benefit chart defaults to the top N by popularity; the other
-  // charts default to the full fetched set (they're panoramas of the whole
-  // category). A manual selection overrides both defaults the same way.
-  const visibleSeries = selectedSeries ?? series.slice(0, DEFAULT_VISIBLE_COUNT);
-  const insightSeries = selectedSeries ?? series;
+      : series.slice(0, DEFAULT_VISIBLE_COUNT);
   const rows = buildChartRows(visibleSeries, metric);
   const chartConfig = buildChartConfig(visibleSeries);
 
@@ -170,19 +124,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
   const methodLabel = AGGREGATION_METHOD_OPTIONS.find((o) => o.value === aggregationMethod)?.label;
   const metricLabel = METRIC_OPTIONS.find((o) => o.value === metric)?.label;
 
-  function toggleProduct(description: string) {
-    setSelectedProducts((prev) =>
-      prev.includes(description) ? prev.filter((p) => p !== description) : [...prev, description]
-    );
-  }
-
-  const productPickerLabel =
-    selectedProducts.length === 0
-      ? "Especificas"
-      : `${selectedProducts.length} ite${selectedProducts.length > 1 ? "ns" : "m"} selecionado${selectedProducts.length > 1 ? "s" : ""}`;
-
   return (
-    <>
     <Card className="pt-0">
       <CardHeader className="flex flex-col gap-4 border-b py-5 lg:flex-row lg:items-center">
         <div className="grid flex-1 gap-1">
@@ -192,21 +134,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select value={category} onValueChange={(value) => value && setCategory(value)}>
-            <SelectTrigger className="w-[160px]" aria-label="Categoria">
-              <SelectValue>
-                {(value: string) => CATEGORY_OPTIONS.find((o) => o.value === value)?.label}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORY_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={months} onValueChange={(value) => value && setMonths(value)}>
+          <Select value={months} onValueChange={(value) => value && onMonthsChange(value)}>
             <SelectTrigger className="w-[130px]" aria-label="Período">
               <SelectValue>
                 {(value: string) => PERIOD_OPTIONS.find((o) => o.value === value)?.label}
@@ -220,7 +148,10 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
               ))}
             </SelectContent>
           </Select>
-          <Select value={timeAggregation} onValueChange={(value) => value && setTimeAggregation(value)}>
+          <Select
+            value={timeAggregation}
+            onValueChange={(value) => value && onTimeAggregationChange(value)}
+          >
             <SelectTrigger className="w-[140px]" aria-label="Agregação de tempo">
               <SelectValue>
                 {(value: string) => TIME_AGGREGATION_OPTIONS.find((o) => o.value === value)?.label}
@@ -236,7 +167,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
           </Select>
           <Select
             value={aggregationMethod}
-            onValueChange={(value) => value && setAggregationMethod(value)}
+            onValueChange={(value) => value && onAggregationMethodChange(value)}
           >
             <SelectTrigger className="w-[170px]" aria-label="Método de agregação">
               <SelectValue>
@@ -251,51 +182,6 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
               ))}
             </SelectContent>
           </Select>
-          <Popover open={productPickerOpen} onOpenChange={setProductPickerOpen}>
-            <PopoverTrigger
-              render={
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={productPickerOpen}
-                  className="w-[220px] justify-between font-normal"
-                />
-              }
-            >
-              <span className="truncate">{productPickerLabel}</span>
-              <ChevronsUpDownIcon className="opacity-50" />
-            </PopoverTrigger>
-            <PopoverContent className="w-[280px] p-0" align="end">
-              <Command>
-                <CommandInput placeholder="Buscar placa..." />
-                <CommandList>
-                  <CommandEmpty>Nenhuma placa encontrada.</CommandEmpty>
-                  {selectedProducts.length > 0 && (
-                    <>
-                      <CommandGroup>
-                        <CommandItem onSelect={() => setSelectedProducts([])}>
-                          Mostrar mais populares (padrão)
-                        </CommandItem>
-                      </CommandGroup>
-                      <CommandSeparator />
-                    </>
-                  )}
-                  <CommandGroup>
-                    {series.map((s) => (
-                      <CommandItem
-                        key={s.productDescription}
-                        value={s.productDescription}
-                        data-checked={selectedProducts.includes(s.productDescription)}
-                        onSelect={() => toggleProduct(s.productDescription)}
-                      >
-                        {s.productDescription}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
         </div>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -313,7 +199,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
           </TabsList>
         </Tabs>
         {isLoading ? (
-          <Skeleton className="h-[350px] w-full" />
+          <ChartLoading height={350} />
         ) : series.length === 0 ? (
           <div className="flex h-[350px] flex-col items-center justify-center gap-2 text-center">
             <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -355,7 +241,7 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
                       <div className="flex w-full items-center justify-between gap-4">
                         <span className="flex items-center gap-1.5 text-muted-foreground">
                           <span
-                            className="size-2.5 shrink-0 rounded-[2px]"
+                            className="size-2.5 shrink-0 rounded-xs"
                             style={{ backgroundColor: item.color }}
                           />
                           {chartConfig[item.dataKey as string]?.label}
@@ -386,11 +272,5 @@ export function PriceHistoryChart({ initialData }: PriceHistoryChartProps) {
         )}
       </CardContent>
     </Card>
-    <PriceMoversChart series={insightSeries} isLoading={isLoading} />
-    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      <PopularityPriceChart series={insightSeries} isLoading={isLoading} />
-      <CurrentPriceChart series={insightSeries} isLoading={isLoading} />
-    </div>
-    </>
   );
 }

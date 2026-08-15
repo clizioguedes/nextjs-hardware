@@ -4,7 +4,7 @@ import { CartesianGrid, Scatter, ScatterChart, XAxis, YAxis } from "recharts";
 import { SearchXIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartLoading } from "@/components/dashboard/chart-loading";
 import type { PriceHistorySeries } from "@/lib/pcbuildwizard/types";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -57,7 +57,7 @@ export function PopularityPriceChart({ series, isLoading }: PopularityPriceChart
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {isLoading ? (
-          <Skeleton className="h-[300px] w-full" />
+          <ChartLoading height={300} />
         ) : points.length === 0 ? (
           <div className="flex h-[300px] flex-col items-center justify-center gap-2 text-center">
             <div className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">

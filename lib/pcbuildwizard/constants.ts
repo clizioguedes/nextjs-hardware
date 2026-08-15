@@ -1,4 +1,5 @@
-export const PCBW_BASE_URL = "https://api.pcbuildwizard.com";
+export const PCBW_BASE_URL =
+  process.env.PCBW_BASE_URL ?? "https://api.pcbuildwizard.com";
 export const PCBW_CREATOR = "pcbuildwizard";
 export const PCBW_COUNTRY = "BR";
 export const PCBW_CHANNEL = "pcbuildwizard-ws";

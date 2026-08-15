@@ -1,4 +1,4 @@
-import { PriceHistoryChart } from "@/components/dashboard/price-history-chart";
+import { Dashboard } from "@/components/dashboard/dashboard";
 import {
   PRICE_HISTORY_AGGREGATION_METHOD,
   PRICE_HISTORY_TIME_AGGREGATION,
@@ -16,7 +16,7 @@ export default async function Home() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-6 px-6 py-10">
-      <PriceHistoryChart initialData={initialData} />
+      <Dashboard initialData={initialData} />
     </div>
   );
 }
