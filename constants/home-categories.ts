@@ -1,46 +1,61 @@
-import { CircuitBoardIcon, CpuIcon, GpuIcon, HardDriveIcon, MemoryStickIcon, ZapIcon } from "lucide-react";
+import {
+  CircuitBoardIcon,
+  CpuIcon,
+  GpuIcon,
+  HardDriveIcon,
+  MemoryStickIcon,
+  PcCaseIcon,
+  ZapIcon,
+} from "lucide-react";
 
 export const homeCategories = [
   {
     name: "Placas de Vídeo",
     description: "GPUs de todas as marcas, com preços de várias lojas.",
-    href: "/placas-de-video",
+    href: "/products/gpus",
     icon: GpuIcon,
     enabled: true,
   },
   {
     name: "Processadores",
     description: "CPUs Intel e AMD.",
-    href: "/processadores",
+    href: "/products/cpus",
     icon: CpuIcon,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Placas-mãe",
     description: "Motherboards para todos os sockets.",
-    href: "/placas-mae",
+    href: "/products/motherboard",
     icon: CircuitBoardIcon,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Memória RAM",
     description: "Módulos DDR4 e DDR5.",
-    href: "/memoria-ram",
+    href: "/products/memory",
     icon: MemoryStickIcon,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Fontes",
     description: "Fontes de alimentação certificadas.",
-    href: "/fontes",
+    href: "/products/power-supply",
     icon: ZapIcon,
-    enabled: false,
+    enabled: true,
   },
   {
     name: "Armazenamento",
     description: "SSDs e HDs.",
-    href: "/armazenamento",
+    href: "/products/ssd",
     icon: HardDriveIcon,
-    enabled: false,
+    enabled: true,
+  },
+  {
+    name: "Gabinetes",
+    description: "Cases para todos os estilos de build.",
+    href: "/products/case",
+    icon: PcCaseIcon,
+    enabled: true,
   },
 ] as const;

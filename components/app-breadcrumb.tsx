@@ -27,9 +27,9 @@ export function AppBreadcrumb() {
       <BreadcrumbList>
         <BreadcrumbItem>
           {pathname === "/" ? (
-            <BreadcrumbPage>Zeen Hardware</BreadcrumbPage>
+            <BreadcrumbPage>Início</BreadcrumbPage>
           ) : (
-            <BreadcrumbLink render={<Link href="/" />}>Zeen Hardware</BreadcrumbLink>
+            <BreadcrumbLink render={<Link href="/" />}>Início</BreadcrumbLink>
           )}
         </BreadcrumbItem>
         {category && (

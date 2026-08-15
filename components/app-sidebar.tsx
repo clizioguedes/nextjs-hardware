@@ -47,9 +47,9 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton render={<Link href="/" />} isActive={pathname === "/"} tooltip="Dashboard">
+                <SidebarMenuButton render={<Link href="/" />} isActive={pathname === "/"} tooltip="Início">
                   <LayoutDashboardIcon />
-                  <span>Dashboard</span>
+                  <span>Início</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

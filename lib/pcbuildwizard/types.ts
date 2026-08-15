@@ -8,7 +8,9 @@ export interface Merchant {
 export interface Manufacturer {
   id: number;
   name: string;
-  warrantyTime: number;
+  // Nullable in practice across categories (e.g. NZXT/video-cards, AMD/cpus),
+  // not a category-specific quirk — confirmed live.
+  warrantyTime: number | null;
 }
 
 export interface ColorFeature {
@@ -16,7 +18,9 @@ export interface ColorFeature {
   localName: string;
 }
 
-export interface VideoCardProduct {
+// Shared across categories (video cards, CPUs, motherboards, ...) — confirmed
+// field-for-field identical across the live API responses for each.
+export interface Product {
   tag: string;
   categoryName: string;
   categoryLocalName: string;
@@ -108,7 +112,23 @@ export interface ProductOffer {
   value: number | null;
 }
 
-export interface VideoCardDetail {
+export interface PriceHistoryPoint {
+  date: string;
+  price: number;
+  finalPrice: number;
+  defaultLocalMoneyValue: number;
+  defaultValueForMoney: number;
+  installmentMonths: number | null;
+}
+
+export interface PriceHistorySeries {
+  merchantName: string | null;
+  productDescription: string;
+  productPopularityScore: number;
+  priceHistory: PriceHistoryPoint[];
+}
+
+export interface ProductDetail {
   tag: string;
   alternativeTag: string;
   categoryName: string;
