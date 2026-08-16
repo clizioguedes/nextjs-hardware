@@ -1,4 +1,11 @@
 import { createSearchParamsCache, parseAsArrayOf, parseAsString } from "nuqs/server";
+import {
+  PRICE_HISTORY_CATEGORY_GPU,
+} from "@/lib/pcbuildwizard/constants";
+import {
+  PRICE_HISTORY_AGGREGATION_METHOD,
+  PRICE_HISTORY_TIME_AGGREGATION,
+} from "@/lib/pcbuildwizard/price-history";
 
 // Table pagination/sorting stay as local component state (TanStack Table
 // defaults) rather than URL-synced — the API returns the full result set
@@ -66,4 +73,20 @@ export const caseFilterParsers = {
 export const caseFiltersCache = createSearchParamsCache(caseFilterParsers);
 export type CaseFilters = {
   merchants: string[];
+};
+
+export const dashboardFilterParsers = {
+  category: parseAsString.withDefault(String(PRICE_HISTORY_CATEGORY_GPU)),
+  months: parseAsString.withDefault("12"),
+  timeAggregation: parseAsString.withDefault(String(PRICE_HISTORY_TIME_AGGREGATION.week)),
+  aggregationMethod: parseAsString.withDefault(String(PRICE_HISTORY_AGGREGATION_METHOD.median)),
+  selectedProducts: parseAsArrayOf(parseAsString).withDefault([]),
+};
+export const dashboardFiltersCache = createSearchParamsCache(dashboardFilterParsers);
+export type DashboardFilters = {
+  category: string;
+  months: string;
+  timeAggregation: string;
+  aggregationMethod: string;
+  selectedProducts: string[];
 };

@@ -20,6 +20,7 @@ interface ProductPickerProps {
   selected: string[];
   onToggle: (description: string) => void;
   onClear: () => void;
+  labelId?: string;
 }
 
 // Visual multi-select: the trigger itself renders the selection as removable
@@ -27,7 +28,13 @@ interface ProductPickerProps {
 // <button> — using a div with role="combobox" avoids putting the chips'
 // clickable "×" inside a real <button> (invalid interactive-in-interactive
 // nesting).
-export function ProductPicker({ products, selected, onToggle, onClear }: ProductPickerProps) {
+export function ProductPicker({
+  products,
+  selected,
+  onToggle,
+  onClear,
+  labelId,
+}: ProductPickerProps) {
   const [open, setOpen] = useState(false);
 
   function removeChip(e: React.MouseEvent | React.KeyboardEvent, description: string) {
@@ -44,13 +51,14 @@ export function ProductPicker({ products, selected, onToggle, onClear }: Product
             role="combobox"
             aria-expanded={open}
             aria-controls="product-picker-list"
+            aria-labelledby={labelId}
             tabIndex={0}
             className="flex min-h-8 w-full min-w-70 flex-1 flex-wrap items-center gap-1 rounded-lg border border-input bg-transparent px-2 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         }
       >
         {selected.length === 0 ? (
-          <span className="text-muted-foreground">Todas as placas (top 5)</span>
+          <span className="text-muted-foreground">Todos os itens (top 5)</span>
         ) : (
           selected.map((description) => (
             <Badge key={description} variant="secondary" className="max-w-full gap-1 pr-1">
@@ -76,9 +84,9 @@ export function ProductPicker({ products, selected, onToggle, onClear }: Product
       </PopoverTrigger>
       <PopoverContent className="w-96 p-0" align="start">
         <Command>
-          <CommandInput placeholder="Buscar placa..." />
+          <CommandInput placeholder="Buscar item..." />
           <CommandList id="product-picker-list">
-            <CommandEmpty>Nenhuma placa encontrada.</CommandEmpty>
+            <CommandEmpty>Nenhum item encontrado.</CommandEmpty>
             {selected.length > 0 && (
               <>
                 <CommandGroup>

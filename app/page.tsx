@@ -1,17 +1,16 @@
 import { Dashboard } from "@/components/dashboard/dashboard";
-import {
-  PRICE_HISTORY_AGGREGATION_METHOD,
-  PRICE_HISTORY_TIME_AGGREGATION,
-  getPriceHistory,
-} from "@/lib/pcbuildwizard/price-history";
-import { PRICE_HISTORY_CATEGORY_GPU } from "@/lib/pcbuildwizard/constants";
+import { getPriceHistory } from "@/lib/pcbuildwizard/price-history";
+import { dashboardFiltersCache } from "@/lib/pcbuildwizard/search-params";
 
-export default async function Home() {
+export default async function Home(props: PageProps<"/">) {
+  const { category, months, timeAggregation, aggregationMethod } = await dashboardFiltersCache.parse(
+    props.searchParams
+  );
   const initialData = await getPriceHistory({
-    category: PRICE_HISTORY_CATEGORY_GPU,
-    months: 12,
-    timeAggregation: PRICE_HISTORY_TIME_AGGREGATION.week,
-    aggregationMethod: PRICE_HISTORY_AGGREGATION_METHOD.median,
+    category: Number(category),
+    months: Number(months),
+    timeAggregation: Number(timeAggregation),
+    aggregationMethod: Number(aggregationMethod),
   });
 
   return (

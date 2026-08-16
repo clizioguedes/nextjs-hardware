@@ -51,7 +51,7 @@ const AGGREGATION_METHOD_OPTIONS = [
 
 // When no specific product is picked, plot the top N by popularity — matches
 // the 5 chart colors (--chart-1..5) so the default view stays legible.
-const DEFAULT_VISIBLE_COUNT = 5;
+export const DEFAULT_VISIBLE_COUNT = 5;
 
 type PriceMetric = "finalPrice" | "defaultValueForMoney";
 

@@ -1,38 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Link from "next/link";
+import { useQueryStates } from "nuqs";
+import { ArrowRightIcon, CpuIcon, GpuIcon, InfoIcon, MemoryStickIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrentPriceChart } from "@/components/dashboard/current-price-chart";
 import { FairValueChart } from "@/components/dashboard/fair-value-chart";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { PopularityPriceChart } from "@/components/dashboard/popularity-price-chart";
-import { PriceHistoryChart } from "@/components/dashboard/price-history-chart";
+import { DEFAULT_VISIBLE_COUNT, PriceHistoryChart } from "@/components/dashboard/price-history-chart";
 import { PriceMoversChart } from "@/components/dashboard/price-movers-chart";
 import { PriceVolatilityChart } from "@/components/dashboard/price-volatility-chart";
 import { ProductPicker } from "@/components/dashboard/product-picker";
+import { SelectionSummary } from "@/components/dashboard/selection-summary";
 import { useRequest } from "@/lib/use-request";
+import { dashboardFilterParsers } from "@/lib/pcbuildwizard/search-params";
 import {
   PRICE_HISTORY_CATEGORY_CPU,
   PRICE_HISTORY_CATEGORY_GPU,
   PRICE_HISTORY_CATEGORY_MEMORY,
 } from "@/lib/pcbuildwizard/constants";
-import {
-  PRICE_HISTORY_AGGREGATION_METHOD,
-  PRICE_HISTORY_TIME_AGGREGATION,
-  buildPriceHistoryUrl,
-} from "@/lib/pcbuildwizard/price-history";
+import { buildPriceHistoryUrl } from "@/lib/pcbuildwizard/price-history";
 import type { PriceHistorySeries } from "@/lib/pcbuildwizard/types";
 
+// The /products/price-history category ids above are numbered separately
+// from the /products catalog ids used for these hrefs (e.g. GPU is 49 here
+// but 24 there) — see lib/pcbuildwizard/constants.ts — so the links are
+// hardcoded here rather than joined against constants/home-categories.ts.
 const CATEGORY_OPTIONS = [
-  { value: String(PRICE_HISTORY_CATEGORY_GPU), label: "Placas de vídeo" },
-  { value: String(PRICE_HISTORY_CATEGORY_MEMORY), label: "Memória RAM" },
-  { value: String(PRICE_HISTORY_CATEGORY_CPU), label: "Processadores" },
+  {
+    value: String(PRICE_HISTORY_CATEGORY_GPU),
+    label: "Placas de vídeo",
+    icon: GpuIcon,
+    href: "/products/gpus",
+  },
+  {
+    value: String(PRICE_HISTORY_CATEGORY_MEMORY),
+    label: "Memória RAM",
+    icon: MemoryStickIcon,
+    href: "/products/memory",
+  },
+  {
+    value: String(PRICE_HISTORY_CATEGORY_CPU),
+    label: "Processadores",
+    icon: CpuIcon,
+    href: "/products/cpus",
+  },
 ];
 
 interface DashboardProps {
@@ -40,13 +56,8 @@ interface DashboardProps {
 }
 
 export function Dashboard({ initialData }: DashboardProps) {
-  const [category, setCategory] = useState(CATEGORY_OPTIONS[0].value);
-  const [months, setMonths] = useState("12");
-  const [timeAggregation, setTimeAggregation] = useState(String(PRICE_HISTORY_TIME_AGGREGATION.week));
-  const [aggregationMethod, setAggregationMethod] = useState(
-    String(PRICE_HISTORY_AGGREGATION_METHOD.median)
-  );
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [filters, setFilters] = useQueryStates(dashboardFilterParsers);
+  const { category, months, timeAggregation, aggregationMethod, selectedProducts } = filters;
 
   const url = buildPriceHistoryUrl({
     category: Number(category),
@@ -59,17 +70,6 @@ export function Dashboard({ initialData }: DashboardProps) {
 
   const series = data ?? [];
 
-  // A picked product only makes sense for the filters it was picked under —
-  // reset the selection whenever the underlying query (and therefore the
-  // list of available products) changes. Adjusting state during render
-  // (rather than in an effect) avoids an extra commit — see
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes.
-  const [prevUrl, setPrevUrl] = useState(url);
-  if (url !== prevUrl) {
-    setPrevUrl(url);
-    setSelectedProducts([]);
-  }
-
   // null = no manual selection ("placas específicas" not used). Every
   // "panorama" chart/card below shares this so a manual pick narrows the
   // whole dashboard consistently, not just the line chart.
@@ -79,40 +79,82 @@ export function Dashboard({ initialData }: DashboardProps) {
       : series;
 
   function toggleProduct(description: string) {
-    setSelectedProducts((prev) =>
-      prev.includes(description) ? prev.filter((p) => p !== description) : [...prev, description]
-    );
+    setFilters((prev) => ({
+      selectedProducts: prev.selectedProducts.includes(description)
+        ? prev.selectedProducts.filter((p) => p !== description)
+        : [...prev.selectedProducts, description],
+    }));
   }
+
+  const activeCategory = CATEGORY_OPTIONS.find((o) => o.value === category) ?? CATEGORY_OPTIONS[0];
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground">Acompanhe a variação de preço por categoria.</p>
+      <h1 className="sr-only">Dashboard</h1>
+
+      <Alert variant="info">
+        <InfoIcon />
+        <AlertDescription>
+          Escolha uma categoria e, se quiser, itens específicos abaixo — os indicadores, o
+          histórico de preços e os demais gráficos são atualizados automaticamente conforme sua
+          seleção.
+        </AlertDescription>
+      </Alert>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label id="category-label">Categoria</Label>
+            {/* A new category always narrows the product list, so a
+                previously picked product may no longer apply — reset it in
+                the same update as the category change. Unlike the old
+                prevUrl-diff approach, this reset is enumerative: any future
+                filter control that changes the query must also clear
+                selectedProducts in its own handler. */}
+            <Tabs
+              value={category}
+              onValueChange={(value) => value && setFilters({ category: value, selectedProducts: [] })}
+            >
+              <TabsList aria-labelledby="category-label">
+                {CATEGORY_OPTIONS.map((o) => (
+                  <TabsTrigger key={o.value} value={o.value}>
+                    <o.icon />
+                    <span className="hidden sm:inline">{o.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            nativeButton={false}
+            render={<Link href={activeCategory.href} />}
+          >
+            Ver todos os produtos
+            <ArrowRightIcon />
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label id="product-picker-label">Itens</Label>
+          <ProductPicker
+            labelId="product-picker-label"
+            products={series}
+            selected={selectedProducts}
+            onToggle={toggleProduct}
+            onClear={() => setFilters({ selectedProducts: [] })}
+          />
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Select value={category} onValueChange={(value) => value && setCategory(value)}>
-          <SelectTrigger className="w-50" aria-label="Categoria">
-            <SelectValue>
-              {(value: string) => CATEGORY_OPTIONS.find((o) => o.value === value)?.label}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ProductPicker
-          products={series}
-          selected={selectedProducts}
-          onToggle={toggleProduct}
-          onClear={() => setSelectedProducts([])}
-        />
-      </div>
+      <SelectionSummary
+        categoryLabel={activeCategory.label}
+        totalCount={series.length}
+        topCount={DEFAULT_VISIBLE_COUNT}
+        selectedProducts={selectedProducts}
+        onRemoveProduct={toggleProduct}
+      />
 
       <KpiCards series={insightSeries} isLoading={isLoading} totalCount={series.length} />
 
@@ -120,11 +162,15 @@ export function Dashboard({ initialData }: DashboardProps) {
         series={series}
         isLoading={isLoading}
         months={months}
-        onMonthsChange={setMonths}
+        onMonthsChange={(value) => setFilters({ months: value, selectedProducts: [] })}
         timeAggregation={timeAggregation}
-        onTimeAggregationChange={setTimeAggregation}
+        onTimeAggregationChange={(value) =>
+          setFilters({ timeAggregation: value, selectedProducts: [] })
+        }
         aggregationMethod={aggregationMethod}
-        onAggregationMethodChange={setAggregationMethod}
+        onAggregationMethodChange={(value) =>
+          setFilters({ aggregationMethod: value, selectedProducts: [] })
+        }
         selectedProducts={selectedProducts}
       />
 
